@@ -1,0 +1,132 @@
+sort1 uses: bubble sort
+
+How do you know?: it is faster on sorted data than sort3
+
+sort2 uses: merge sort
+
+How do you know?: fastest on large datasets with unsorted data
+
+sort3 uses: selection sort
+
+How do you know?: slower than sort1 on sorted data
+
+
+reversed50000.txt
+
+sort1 - worst
+real    0m5.217s
+user    0m4.213s
+sys     0m0.292s
+
+sort2 - best
+real    0m1.017s
+user    0m0.043s
+sys     0m0.219s
+
+sort3
+real    0m2.856s
+user    0m2.022s
+sys     0m0.221s
+
+
+random50000.txt
+
+sort1 - worst
+real    0m6.232s
+user    0m5.023s
+sys     0m0.218s
+
+sort2 - best
+real    0m0.952s
+user    0m0.029s
+sys     0m0.232s
+
+sort3
+real    0m2.898s
+user    0m1.853s
+sys     0m0.238s
+
+
+sorted50000.txt
+
+sort1 - best
+real    0m1.005s
+user    0m0.038s
+sys     0m0.209s
+
+sort2
+real    0m1.247s
+user    0m0.023s
+sys     0m0.231s
+
+sort3 - worst
+real    0m2.722s
+user    0m1.848s
+sys     0m0.228s
+
+reversed5000.txt
+
+sort1 - worst
+real    0m0.070s
+user    0m0.049s
+sys     0m0.019s
+
+sort2
+real    0m0.065s
+user    0m0.000s
+sys     0m0.030s
+
+sort3 - best
+real    0m0.052s
+user    0m0.020s
+sys     0m0.027s
+
+random5000.txt
+
+sort1
+real    0m0.060s
+user    0m0.034s
+sys     0m0.025s
+
+sort2 - best
+real    0m0.032s
+user    0m0.000s
+sys     0m0.027s
+
+sort3 - worst
+real    0m0.063s
+user    0m0.025s
+sys     0m0.025s
+
+sorted5000.txt
+
+sort1 - best
+real    0m0.027s
+user    0m0.000s
+sys     0m0.025s
+
+sort2
+real    0m0.033s
+user    0m0.007s
+sys     0m0.020s
+
+sort3
+real    0m0.043s
+user    0m0.023s
+sys     0m0.020s
+
+sorted10000.txt
+
+sort1 - best
+real    0m0.068s
+user    0m0.000s
+sys     0m0.052s
+
+sort3
+real    0m0.142s
+user    0m0.064s
+sys     0m0.057s
+
+Real is wall clock time - time from start to finish of the call. This is all elapsed time including time slices used by other processes and time the process spends blocked (for example if it is waiting for I/O to complete).
+User is the amount of CPU time spent in user-mode code (outside the kernel) within the process. This is only actual CPU time used in executing the process. Other processes and time the process spends blocked do not count towards this figure.
+Sys is the amount of CPU time spent in the kernel within the process. This means executing CPU time spent in system calls within the kernel, as opposed to library code, which is still running in user-space. Like 'user', this is only CPU time used by the process. See below for a brief description of kernel mode (also known as 'supervisor' mode) and the system call mechanism.

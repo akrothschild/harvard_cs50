@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500&display=swap" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
+    <title>Trivia!</title>
+    <script>
+
+        function doTrivia(id, b) {
+
+            document.querySelectorAll('button').forEach(btn => btn.disabled = true);
+
+            const answer = document.getElementById('isCorrectChoice');
+            const button = document.getElementById(id);
+
+            if(b) {
+                button.classList.add('correct');
+                answer.textContent = "Correct!";
+            }
+            else
+            {
+                button.classList.add('incorrect');
+                answer.textContent = "Incorrect";
+            }
+        }
+
+        function checkFR() {
+            const answer = document.getElementById('isCorrectFR');
+            const fr = document.getElementById('fr');
+            const myAnswer = "ROME";
+
+            if (fr.value.trim().toUpperCase() === myAnswer)
+            {
+                fr.classList.add('correct');
+                answer.textContent = "Correct!";
+            }
+            else
+            {
+                fr.classList.add('incorrect');
+                answer.textContent = "Incorrect";
+            }
+        }
+
+
+
+    </script>
+</head>
+<body>
+<div class="header">
+    <h1>Trivia!</h1>
+</div>
+
+<div class="container">
+    <div class="section">
+        <h2>Part 1: Multiple Choice </h2>
+        <hr>
+        <h3>What is the capital of Germany?</h3>
+        <button id="b1" onclick="doTrivia('b1', true)">Berlin</button>
+        <button id="b2" onclick="doTrivia('b2', false)">Paris</button>
+        <button id="b3" onclick="doTrivia('b3', false)">Moscow</button>
+        <button id="b4" onclick="doTrivia('b4', false)">London</button>
+        <button id="b5" onclick="doTrivia('b5', false)">Madrid</button>
+        <br>
+        <div id="isCorrectChoice"></div>
+    </div>
+
+    <div class="section">
+        <h2>Part 2: Free Response</h2>
+        <hr>
+        <h3>What is the capital of Italy?</h3>
+        <input type="text" id="fr" />
+        <button onclick="checkFR()">Check</button>
+        <br>
+        <div id="isCorrectFR"></div>
+    </div>
+</div>
+</body>
+</html>

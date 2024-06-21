@@ -1,0 +1,11 @@
+HTML Tags:
+- div, p, h1, h2, a, img, ul, li, form, input, ...
+
+CSS Properties:
+- font-family, margin, padding, color, card, transition, ...
+
+JavaScript:
+- JavaScript for webpage functionality, such as content loading, etc.
+
+Bootstrap:
+- Bootstrap is utilized for its grid system and navigation.

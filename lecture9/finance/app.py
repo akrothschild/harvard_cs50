@@ -1,11 +1,12 @@
 import os
 
-from cs50 import SQL
 from flask import Flask, flash, redirect, render_template, request, session
 from flask_session import Session
 from werkzeug.security import check_password_hash, generate_password_hash
+from cs50 import SQL
 
-from helpers import apology, login_required, lookup, usd
+from helpers import apology, login_required, lookup, usd, register, buy, sell, quote, history, login_helper, \
+    index_helper
 
 # Configure application
 app = Flask(__name__)
@@ -21,6 +22,34 @@ Session(app)
 # Configure CS50 Library to use SQLite database
 db = SQL("sqlite:///finance.db")
 
+def create_tables():
+    """Create tables if they do not exist."""
+    try:
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL UNIQUE,
+                hash TEXT NOT NULL,
+                cash NUMERIC NOT NULL DEFAULT 10000.00
+            )
+        """)
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS transactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                symbol TEXT NOT NULL,
+                shares INTEGER NOT NULL,
+                price NUMERIC NOT NULL,
+                transacted DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )
+        """)
+        print("Tables created successfully or already exist.")
+    except Exception as e:
+        print(f"Error creating tables: {e}")
+
+# Create tables if they do not exist
+create_tables()
 
 @app.after_request
 def after_request(response):
@@ -34,26 +63,33 @@ def after_request(response):
 @app.route("/")
 @login_required
 def index():
+    create_tables()
     """Show portfolio of stocks"""
-    return apology("TODO")
+    if request.method == "GET":
+        return index_helper(db, request)
+    else:
+        return apology("no stocks here", 403)
 
 
 @app.route("/buy", methods=["GET", "POST"])
 @login_required
-def buy():
+def buy_route():
     """Buy shares of stock"""
-    return apology("TODO")
+    if request.method == "POST":
+        return buy()
+    else:
+        return render_template("buy.html")
 
 
 @app.route("/history")
 @login_required
-def history():
+def history_route():
     """Show history of transactions"""
-    return apology("TODO")
+    return history()
 
 
 @app.route("/login", methods=["GET", "POST"])
-def login():
+def login(response):
     """Log user in"""
 
     # Forget any user_id
@@ -61,30 +97,8 @@ def login():
 
     # User reached route via POST (as by submitting a form via POST)
     if request.method == "POST":
-        # Ensure username was submitted
-        if not request.form.get("username"):
-            return apology("must provide username", 403)
-
-        # Ensure password was submitted
-        elif not request.form.get("password"):
-            return apology("must provide password", 403)
-
-        # Query database for username
-        rows = db.execute(
-            "SELECT * FROM users WHERE username = ?", request.form.get("username")
-        )
-
-        # Ensure username exists and password is correct
-        if len(rows) != 1 or not check_password_hash(
-            rows[0]["hash"], request.form.get("password")
-        ):
-            return apology("invalid username and/or password", 403)
-
-        # Remember which user has logged in
-        session["user_id"] = rows[0]["id"]
-
-        # Redirect user to home page
-        return redirect("/")
+        response.status_code = 200
+        return login_helper()
 
     # User reached route via GET (as by clicking a link or via redirect)
     else:
@@ -99,24 +113,37 @@ def logout():
     session.clear()
 
     # Redirect user to login form
-    return redirect("/")
+    return redirect("/login")
 
 
 @app.route("/quote", methods=["GET", "POST"])
 @login_required
-def quote():
+def quote_route():
     """Get stock quote."""
-    return apology("TODO")
+    if request.method == "POST":
+        return quote()
+    else:
+        return render_template("quote.html")
 
 
 @app.route("/register", methods=["GET", "POST"])
-def register():
+def register_route():
     """Register user"""
-    return apology("TODO")
+    if request.method == "POST":
+        return register()
+    else:
+        return render_template("register.html")
 
 
 @app.route("/sell", methods=["GET", "POST"])
 @login_required
-def sell():
+def sell_route():
     """Sell shares of stock"""
-    return apology("TODO")
+    if request.method == "POST":
+        return sell()
+    else:
+        return render_template("sell.html")
+
+
+if __name__ == "__main__":
+    app.run(debug=True)

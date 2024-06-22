@@ -1,18 +1,14 @@
-import os
-
-from flask import Flask, flash, redirect, render_template, request, session
-from flask_session import Session
-from werkzeug.security import check_password_hash, generate_password_hash
 from cs50 import SQL
+from flask import Flask, redirect, render_template, request, session
+from flask_session import Session
 
-from helpers import apology, login_required, lookup, usd, register, buy, sell, quote, history, login_helper, \
-    index_helper
+import helpers
 
 # Configure application
 app = Flask(__name__)
 
 # Custom filter
-app.jinja_env.filters["usd"] = usd
+app.jinja_env.filters["usd"] = helpers.usd
 
 # Configure session to use filesystem (instead of signed cookies)
 app.config["SESSION_PERMANENT"] = False
@@ -22,34 +18,6 @@ Session(app)
 # Configure CS50 Library to use SQLite database
 db = SQL("sqlite:///finance.db")
 
-def create_tables():
-    """Create tables if they do not exist."""
-    try:
-        db.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT NOT NULL UNIQUE,
-                hash TEXT NOT NULL,
-                cash NUMERIC NOT NULL DEFAULT 10000.00
-            )
-        """)
-        db.execute("""
-            CREATE TABLE IF NOT EXISTS transactions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                symbol TEXT NOT NULL,
-                shares INTEGER NOT NULL,
-                price NUMERIC NOT NULL,
-                transacted DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users (id)
-            )
-        """)
-        print("Tables created successfully or already exist.")
-    except Exception as e:
-        print(f"Error creating tables: {e}")
-
-# Create tables if they do not exist
-create_tables()
 
 @app.after_request
 def after_request(response):
@@ -61,89 +29,93 @@ def after_request(response):
 
 
 @app.route("/")
-@login_required
+@helpers.login_required
 def index():
-    create_tables()
     """Show portfolio of stocks"""
-    if request.method == "GET":
-        return index_helper(db, request)
-    else:
-        return apology("no stocks here", 403)
+    return helpers.index_helper(db)
 
 
 @app.route("/buy", methods=["GET", "POST"])
-@login_required
+@helpers.login_required
 def buy_route():
     """Buy shares of stock"""
     if request.method == "POST":
-        return buy()
+        return helpers.buy_helper(db, request)
     else:
         return render_template("buy.html")
 
 
 @app.route("/history")
-@login_required
+@helpers.login_required
 def history_route():
     """Show history of transactions"""
-    return history()
+    return helpers.history_helper(db)
 
 
 @app.route("/login", methods=["GET", "POST"])
-def login(response):
+def login_route():
     """Log user in"""
-
-    # Forget any user_id
     session.clear()
-
-    # User reached route via POST (as by submitting a form via POST)
     if request.method == "POST":
-        response.status_code = 200
-        return login_helper()
-
-    # User reached route via GET (as by clicking a link or via redirect)
+        return helpers.login_helper(db, request)
     else:
         return render_template("login.html")
 
 
 @app.route("/logout")
-def logout():
+def logout_route():
     """Log user out"""
-
-    # Forget any user_id
     session.clear()
-
-    # Redirect user to login form
-    return redirect("/login")
+    return redirect("/")
 
 
 @app.route("/quote", methods=["GET", "POST"])
-@login_required
+@helpers.login_required
 def quote_route():
     """Get stock quote."""
-    if request.method == "POST":
-        return quote()
-    else:
+    if request.method == "GET":
         return render_template("quote.html")
+    elif not request.form.get("symbol"):
+        return helpers.apology("Must Provide Symbol", 400)
+    else:
+        return helpers.quote_helper(request)
 
 
 @app.route("/register", methods=["GET", "POST"])
 def register_route():
     """Register user"""
+    session.clear()
     if request.method == "POST":
-        return register()
+        return helpers.register_helper(db, request)
     else:
         return render_template("register.html")
 
 
 @app.route("/sell", methods=["GET", "POST"])
-@login_required
+@helpers.login_required
 def sell_route():
     """Sell shares of stock"""
     if request.method == "POST":
-        return sell()
+        return helpers.sell_helper(db, request)
     else:
-        return render_template("sell.html")
+        user_id = session["user_id"]
+        user_symbols = db.execute("SELECT symbol FROM transactions WHERE user_id = ? GROUP BY symbol", user_id)
+        return render_template("sell.html", user_symbols=user_symbols)
 
 
-if __name__ == "__main__":
-    app.run(debug=True)
+@app.route("/change-password", methods=["GET", "POST"])
+@helpers.login_required
+def change_password_route():
+    if request.method == "POST":
+        return helpers.change_password_helper(db, request)
+    else:
+        return render_template("change-password.html")
+
+
+@app.route("/add-cash", methods=["GET", "POST"])
+@helpers.login_required
+def cash_route():
+    if request.method == "POST":
+        return helpers.cash_helper(db, request)
+    else:
+        return render_template("add-cash.html")

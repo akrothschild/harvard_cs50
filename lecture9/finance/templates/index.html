@@ -6,7 +6,7 @@ Portfolio
 
 {% block main %}
 <div class="container">
-    <h1 class="my-4">Portfolio</h1>
+    <h1 class="my-4">{{ username }} Portfolio</h1>
 
     <div class="table-responsive">
         <table class="table table-bordered table-hover">
@@ -19,12 +19,12 @@ Portfolio
             </tr>
             </thead>
             <tbody>
-            {% for stock in portfolio %}
+            {% for transaction in transactions %}
             <tr>
-                <td>{{ stock.symbol }}</td>
-                <td>{{ stock.shares }}</td>
-                <td>{{ stock.price | usd }}</td>
-                <td>{{ stock.total | usd }}</td>
+                <td> {{ transaction.symbol }}</td>
+                <td> {{ transaction.shares }}</td>
+                <td> {{ transaction.price | usd}}</td>
+                <td> {{ transaction.balance | usd}}</td>
             </tr>
             {% endfor %}
             <tr>
@@ -33,7 +33,7 @@ Portfolio
             </tr>
             <tr>
                 <td colspan="3" class="text-end"><strong>Total</strong></td>
-                <td><strong>{{ total_value | usd }}</strong></td>
+                <td><strong>{{ total | usd }}</strong></td>
             </tr>
             </tbody>
         </table>

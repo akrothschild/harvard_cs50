@@ -1,18 +1,32 @@
-import csv
-import datetime
-import pytz
+import urllib.parse
 import requests
-import urllib
-import uuid
-#import yfinance as yf
 
-from flask import redirect, render_template, request, session
+from flask import redirect, render_template, session, flash
 from werkzeug.security import check_password_hash, generate_password_hash
-from cs50 import SQL
+from datetime import datetime
 from functools import wraps
 
-# Configure CS50 Library to use SQLite database
-db = SQL("sqlite:///finance.db")
+'''
+========================
+=========START==========
+========================
+'''
+
+'''
+========================
+DEFINE GLOBAL VARIABLES
+========================
+'''
+alert_start = '<div class="alert alert-info" role="alert">'
+alert_end = '</div>'
+
+'''
+========================
+GENERATE APOLOGY
+A function to render an apology.html
+========================
+'''
+
 
 def apology(message, code=400):
     """Render message as an apology to user."""
@@ -23,6 +37,7 @@ def apology(message, code=400):
 
         https://github.com/jacebrowning/memegen#special-characters
         """
+
         for old, new in [
             ("-", "--"),
             (" ", "-"),
@@ -36,23 +51,45 @@ def apology(message, code=400):
             s = s.replace(old, new)
         return s
 
-    return render_template("apology.html", top=code, bottom=escape(message)), code
+    if isinstance(message, str):
+        message = escape(message)
+    else:
+        message = "Error occured!"
+
+    return render_template("apology.html", top=code, bottom=message), code
+
+
+'''
+========================
+REQUIRE LOGIN
+========================
+'''
 
 
 def login_required(f):
     """
     Decorate routes to require login.
 
-    https://flask.palletsprojects.com/en/latest/patterns/viewdecorators/
+    https://flask.palletsprojects.com/en/1.1.x/patterns/viewdecorators/
     """
 
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if session.get("user_id") is None:
             return redirect("/login")
+
         return f(*args, **kwargs)
 
     return decorated_function
+
+
+'''
+========================
+GET STOCKS FROM YAHOO
+A function to search and 
+return stock info
+========================
+'''
 
 
 def lookup(symbol):
@@ -83,205 +120,80 @@ def lookup(symbol):
         # CSV header: Date,Open,High,Low,Close,Adj Close,Volume
         quotes = list(csv.DictReader(response.content.decode("utf-8").splitlines()))
         price = round(float(quotes[-1]["Adj Close"]), 2)
-        return {"price": price, "symbol": symbol}
+        return {"name": symbol, "price": price, "symbol": symbol}
     except (KeyError, IndexError, requests.RequestException, ValueError):
         return None
 
 
+'''
+========================
+GENERATE ENVIRONMENT
+A function to fill 
+environmental variables
+========================
+'''
+
+
 def usd(value):
     """Format value as USD."""
+
     return f"${value:,.2f}"
 
 
-def register():
-    """Register user."""
-
-    if request.method == "POST":
-        # Ensure username was submitted
-        username = request.form.get("username")
-        if not username:
-            return apology("must provide username", 400)
-
-        # Ensure password was submitted
-        password = request.form.get("password")
-        if not password:
-            return apology("must provide password", 400)
-
-        # Ensure confirmation password was submitted and matches
-        confirmation = request.form.get("confirmation")
-        if not confirmation or password != confirmation:
-            return apology("passwords must match", 400)
-
-        # Hash the password
-        hashed_password = generate_password_hash(password)
-
-        # Insert user into database
-        try:
-            db.execute("INSERT INTO users (username, hash) VALUES (?, ?)", username, hashed_password)
-        except ValueError:
-            return apology(f"username {username} already exists", 403)
-
-        # Redirect user to login page
-        return redirect("/login")
-
-    else:
-        return render_template("register.html")
+'''
+========================
+GENERATE TIME
+========================
+'''
 
 
-def buy():
-    """Buy shares of stock."""
+def get_time():
+    """Returns formatted local time."""
 
-    if request.method == "POST":
-        # Ensure symbol was submitted and valid
-        symbol = request.form.get("symbol")
-        if not symbol:
-            return apology("must provide symbol", 403)
-
-        # Ensure shares were submitted and valid
-        try:
-            shares = int(request.form.get("shares"))
-            if shares <= 0:
-                return apology("must provide valid number of shares", 403)
-        except ValueError:
-            return apology("must provide valid number of shares", 403)
-
-        # Lookup the current price of the stock
-        quote = lookup(symbol)
-        if not quote:
-            return apology("invalid symbol", 403)
-
-        # Calculate total cost
-        total_cost = quote["price"] * shares
-
-        # Ensure user can afford the purchase
-        user_id = session["user_id"]
-        rows = db.execute("SELECT cash FROM users WHERE id = ?", user_id)
-        if len(rows) != 1 or rows[0]["cash"] < total_cost:
-            return apology("can't afford", 403)
-
-        # Record the purchase in transactions table
-        db.execute("INSERT INTO transactions (user_id, symbol, shares, price, transacted) VALUES (?, ?, ?, ?, ?)",
-                   user_id, quote["symbol"], shares, quote["price"], datetime.datetime.now(pytz.timezone("US/Eastern")))
-
-        # Update user's cash balance
-        db.execute("UPDATE users SET cash = cash - ? WHERE id = ?", total_cost, user_id)
-
-        # Redirect user to homepage
-        return redirect("/")
-
-    else:
-        return render_template("buy.html")
+    return datetime.now().strftime("%d-%m-%Y %H:%M:%S")
 
 
-def sell():
-    """Sell shares of stock."""
-
-    if request.method == "POST":
-        # Ensure symbol was submitted and valid
-        symbol = request.form.get("symbol").upper()
-        if not symbol:
-            return apology("must provide symbol", 403)
-
-        # Ensure shares were submitted and valid
-        try:
-            shares = int(request.form.get("shares"))
-            if shares <= 0:
-                return apology("must provide valid number of shares", 403)
-        except ValueError:
-            return apology("must provide valid number of shares", 403)
-
-        # Lookup the current price of the stock
-        quote = lookup(symbol)
-        if not quote:
-            return apology("invalid symbol", 403)
-
-        # Determine how many shares the user owns
-        user_id = session["user_id"]
-        rows = db.execute("SELECT SUM(shares) AS total_shares FROM transactions WHERE user_id = ? AND symbol = ?", user_id, symbol)
-        if len(rows) != 1 or rows[0]["total_shares"] is None or rows[0]["total_shares"] < shares:
-            return apology("don't own enough shares", 403)
-
-        # Calculate total sale value
-        total_sale = quote["price"] * shares
-
-        # Record the sale in transactions table (negative shares)
-        db.execute("INSERT INTO transactions (user_id, symbol, shares, price, transacted) VALUES (?, ?, ?, ?, ?)",
-                   user_id, quote["symbol"], -shares, quote["price"], datetime.datetime.now(pytz.timezone("US/Eastern")))
-
-        # Update user's cash balance
-        db.execute("UPDATE users SET cash = cash + ? WHERE id = ?", total_sale, user_id)
-
-        # Redirect user to homepage
-        return redirect("/")
-
-    else:
-        return render_template("sell.html")
+'''
+========================
+CHECK PASSWORD
+========================
+'''
 
 
+def check_password(first_password, second_password):
+    """Checks the passwords to be a match. Returns a message error if they do not match."""
 
-# def build_graph(symbol):
-#     """Look up quote and historical data for symbol."""
-#     try:
-#         # Fetch data using yfinance
-#         stock = yf.Ticker(symbol)
-#
-#         # Get current price
-#         price = stock.history(period='1d')['Close'].iloc[-1]
-#
-#         # Get historical data for the last 30 days
-#         historical_data = stock.history(period='1mo')['Close']
-#         dates = historical_data.index.strftime('%Y-%m-%d').tolist()
-#         prices = historical_data.tolist()
-#
-#         return {"symbol": symbol, "price": price, "name": stock.info.get("longName", symbol), "dates": dates, "prices": prices}
-#     except Exception:
-#         return None
+    if not check_password_hash(first_password, second_password):
+        return apology("Passwords do not match!", code=401)
 
 
-def quote():
-    """Get stock quote."""
-
-    if request.method == "POST":
-        # Ensure symbol was submitted and valid
-        symbol = request.form.get("symbol").upper()
-        if not symbol:
-            return apology("must provide symbol", 403)
-
-        # Lookup the current price of the stock
-        quote = lookup(symbol)
-        if not quote:
-            return apology("invalid symbol", 403)
-
-        # Render quoted price
-        return render_template("quote.html", quote=quote)
-
-    else:
-        return render_template("quote.html")
+'''
+========================
+HELP TO LOGIN
+If unsuccessfully return apology.html
+========================
+'''
 
 
-def history():
-    """Show history of transactions."""
-
-    user_id = session["user_id"]
-    transactions = db.execute("SELECT symbol, shares, price, transacted FROM transactions WHERE user_id = ? ORDER BY transacted DESC", user_id)
-
-    return render_template("history.html", transactions=transactions)
-
-def login_helper():
+def login_helper(db, request):
     # Ensure username was submitted
     if not request.form.get("username"):
-        return apology("must provide username", 403)
+        return apology("must provide username", 400)
 
     # Ensure password was submitted
     elif not request.form.get("password"):
-        return apology("must provide password", 403)
+        return apology("must provide password", 400)
 
     # Query database for username
-    rows = db.execute("SELECT * FROM users WHERE username = ?", request.form.get("username"))
+    rows = db.execute(
+        "SELECT * FROM users WHERE username = ?", request.form.get("username")
+    )
 
     # Ensure username exists and password is correct
-    if len(rows) != 1 or not check_password_hash(rows[0]["hash"], request.form.get("password")):
-        return apology("invalid username and/or password", 403)
+    if len(rows) != 1 or not check_password_hash(
+            rows[0]["hash"], request.form.get("password")
+    ):
+        return apology("invalid username and/or password", 400)
 
     # Remember which user has logged in
     session["user_id"] = rows[0]["id"]
@@ -289,40 +201,251 @@ def login_helper():
     # Redirect user to home page
     return redirect("/")
 
+
+'''
+========================
+GENERATE CASH
+A function to add cash
+========================
+'''
+
+
+def cash_helper(db, request):
+    user_id = session["user_id"]
+    add_cash = request.form.get("add_cash")
+    password = request.form.get("password")
+    if not password:
+        return apology("Must Provide Password", 400)
+    if not add_cash:
+        return apology("Must Provide Cash to add", 400)
+    add_cash = float(add_cash)
+    hash_db = db.execute("SELECT hash FROM users WHERE id = ?", user_id)
+    if not check_password_hash(hash_db[0]["hash"], password):
+        return apology("Incorrect Password!", 400)
+    if add_cash > 10000:
+        return apology("Cannot add more than $10,000 once", 400)
+    cash_db = db.execute("SELECT cash FROM users WHERE id = ?", user_id)
+    db.execute("UPDATE users SET cash = ? + ? WHERE id = ?",
+               cash_db[0]["cash"], add_cash, user_id)
+    flash("Cash Added!")
+    return redirect("/")
+
+
+'''
+========================
+CHANGE PASSWORD
+========================
+'''
+
+
+def change_password_helper(db, request):
+    password = request.form.get("password")
+    new_password = request.form.get("new_password")
+    confirm_password = request.form.get("confirm_password")
+    user_id = session["user_id"]
+    if not password:
+        return apology("Must Provide Password!", 400)
+    elif not new_password:
+        return apology("Must Provide New Password!", 400)
+    elif not confirm_password:
+        return apology("Must Confirm New Password!", 400)
+    user_data = db.execute("SELECT hash FROM users WHERE id = ?", user_id)
+    hash_old = user_data[0]["hash"]
+    if not check_password_hash(hash_old, password):
+        return apology("Incorrect Password!")
+    if new_password != confirm_password:
+        return apology("Invalid Confirmation!", 400)
+    if new_password == password:
+        return apology("New Password is same as your password", 400)
+    special_characters = '!@#$%^&*()-+?_=,<>/"'
+    if not any(c in special_characters for c in new_password):
+        return apology("Password Must Contain a special Character", 400)
+    elif not any(c.isalnum() for c in new_password):
+        return apology("Password must contain letters and numbers", 400)
+    new_hash = generate_password_hash(new_password)
+    db.execute("UPDATE users SET hash = ? WHERE id = ?", new_hash, user_id)
+    flash("Password Changed!")
+    return redirect("/")
+
+
+'''
+========================
+GENERATE SALES
+A function to sell stocks from one´s portfolio
+========================
+'''
+
+
+def sell_helper(db, request):
+    symbol = request.form.get("symbol")
+    shares = int(request.form.get("shares"))
+    if not symbol:
+        return apology("Must provide Symbol", 400)
+    elif not shares:
+        return apology("Must provide number of shares", 400)
+    symbol = symbol.upper()
+    stock = lookup(symbol)
+    if stock == None:
+        return apology("Symbol Does not exist")
+    if shares < 0:
+        return apology("Share not allowed, must be positive integer")
+    transaction_value = shares * stock["price"]
+    user_id = session["user_id"]
+    existing_shares_db = db.execute(
+        "SELECT SUM(shares) AS shares FROM transactions WHERE user_id = ? AND symbol = ? GROUP BY symbol", user_id,
+        symbol)
+    existing_shares = existing_shares_db[0]["shares"]
+    if shares > existing_shares:
+        return apology("Too many shares!", 400)
+    user_cash_balance = db.execute("SELECT cash FROM users WHERE id = ?", user_id)
+    user_cash = user_cash_balance[0]["cash"]
+    updated_cash = user_cash + transaction_value
+    db.execute("UPDATE users SET cash = ? WHERE id = ?", updated_cash, user_id)
+    db.execute(
+        "INSERT INTO transactions (user_id, symbol, shares, price, transacted) VALUES (?, ?, ?, ?, ?)", user_id, symbol,
+        (-1 * shares), stock["price"], get_time())
+    flash("Sold!")
+    return redirect("/")
+
+
+'''
+========================
+GENERATE REGISTRATION
+A function to register a user to use our system
+========================
+'''
+
+
+def register_helper(db, request):
+    username = request.form.get("username")
+    username = username.strip()
+    password = request.form.get("password")
+    confirm_password = request.form.get("confirmation")
+    if confirm_password != password:
+        return apology("Invalid Password, password must be same", 400)
+    elif not username:
+        return apology("must provide username", 400)
+    elif not password:
+        return apology("must provide password", 400)
+    elif not confirm_password:
+        return apology("Must Confirm Password!", 400)
+    special_characters = '!@#$%^&*()-+?_=,<>/"'
+    if not any(c in special_characters for c in password):
+        return apology("Password Must Contain a special Character", 400)
+    elif not any(c.isalnum() for c in password):
+        return apology("Password must contain letters and numbers", 400)
+    hash = generate_password_hash(password)
+    try:
+        # Add username to the database
+        db.execute("INSERT INTO users (username, hash) VALUES( ?, ?)", username, hash)
+    except:
+        return apology("Username Already Exists")
+    redirect_message = 'Successfully registered! Login now'
+    return render_template("login.html", register_message=redirect_message, alert_start=alert_start,
+                           alert_end=alert_end)
+
+
+'''
+========================
+GENERATE STOCKS
+A function to search for Stocks
+========================
+'''
+
+
+def quote_helper(request):
+    symbol = request.form.get("symbol")
+    symbol = symbol.upper()
+    stock = lookup(symbol)
+    if stock == None:
+        return apology("Symbol Does not exist")
+    return render_template("quoted.html", symbol=stock["symbol"], price=stock["price"], alert_start=alert_start,
+                           alert_end=alert_end)
+
+
+'''
+========================
+GENERATE HISTORY
+A function to render an history.html
+with all transactions made
+========================
+'''
+
+
+def history_helper(db):
+    user_id = session["user_id"]
+    transactions = db.execute("SELECT symbol, shares, price, transacted FROM transactions WHERE user_id = ?", user_id)
+    return render_template("history.html", transactions=transactions)
+
+
+'''
+========================
+GENERATE PURCHASES
+A function to "buy" stocks
+========================
+'''
+
+
+def buy_helper(db, request):
+    symbol = request.form.get("symbol")
+    try:
+        shares = int(request.form.get("shares"))
+    except ValueError:
+        return apology("Share not allowed, must be a positive integer", 400)
+    if not symbol:
+        return apology("Must provide Symbol", 400)
+    elif not shares:
+        return apology("Must provide number of shares", 400)
+    symbol = symbol.upper()
+    stock = lookup(symbol)
+    if stock == None:
+        return apology("Symbol Does not exist", 400)
+    if shares < 0 or not isinstance(shares, int):
+        return apology("Share not allowed, must be positive integer", 400)
+    user_id = session["user_id"]
+    transaction_value = shares * stock["price"]
+    user_cash_balance = db.execute("SELECT cash FROM users WHERE id = ?", user_id)
+    user_cash = user_cash_balance[0]["cash"]
+    if user_cash < transaction_value:
+        return apology("Cannot afford")
+    updated_cash = user_cash - transaction_value
+    db.execute("UPDATE users SET cash = ? WHERE id = ?", updated_cash, user_id)
+    db.execute("INSERT INTO transactions (user_id, symbol, shares, price,  transacted) VALUES (?, ?, ?, ?, ?)", user_id,
+               symbol, shares, stock["price"], get_time())
+    flash("Bought!")
+    return redirect("/")
+
+
+'''
+========================
+index_helper
+Renders index.html with data from DB
+========================
+'''
+
+
 def index_helper(db):
-    """Show portfolio of stocks"""
+    user_id = session["user_id"]
+    transactions = db.execute(
+        "SELECT symbol, SUM(shares) AS shares, price, SUM(shares)*price AS balance FROM transactions WHERE user_id = ? GROUP BY symbol",
+        user_id)
+    username_db = db.execute("SELECT username FROM users WHERE id = ?", user_id)
+    username = username_db[0]["username"]
+    cash_balance = db.execute("SELECT cash FROM users WHERE id = ?", user_id)
+    cash = cash_balance[0]["cash"]
+    total_transactions = db.execute(
+        "SELECT SUM(total_balance) AS total FROM (SELECT SUM(shares) * price AS total_balance from transactions WHERE user_id = ? GROUP BY symbol)",
+        user_id)
+    total = total_transactions[0]["total"]
+    if not total:
+        total = 0
+    total = total + cash
+    return render_template("index.html", transactions=transactions, cash=cash, total=total,
+                           username=username)
 
-    # Check if user_id is in session
-    if "user_id" not in session:
-        return apology("Unauthorized", 403)
 
-    # Get user's cash balance
-    rows = db.execute("SELECT cash FROM users WHERE id = ?", session["user_id"])
-    cash = rows[0]["cash"]
-
-    # Get user's stock portfolio
-    rows = db.execute("""
-        SELECT symbol, SUM(shares) as shares
-        FROM transactions
-        WHERE user_id = ?
-        GROUP BY symbol
-        HAVING shares > 0
-    """, session["user_id"])
-
-    portfolio = []
-    total_value = cash
-
-    for row in rows:
-        if row["shares"] > 0:
-            stock = lookup(row["symbol"])
-            if stock:
-                total_stock_value = row["shares"] * stock["price"]
-                total_value += total_stock_value
-                portfolio.append({
-                    "symbol": row["symbol"],
-                    "shares": row["shares"],
-                    "price": stock["price"],
-                    "total": total_stock_value
-                })
-
-    return render_template("index.html", cash=cash, portfolio=portfolio, total_value=total_value)
+'''
+========================
+==========END===========
+========================
+'''

@@ -1,0 +1,13 @@
+{% extends "layout.html" %}
+
+{% block title %}
+{{ symbol }}
+{% endblock %}
+
+{% block main %}
+<div style="margin-top: 10px; margin-bottom: 30px;">
+    <h2>Quoted</h2>
+</div>
+<div>{{ alert_start | safe }} {{ symbol }} {{ alert_end | safe }}</div>
+<div> A share of {{ symbol }} ({{ symbol }}) costs {{ price | usd }}</div>
+{% endblock %}

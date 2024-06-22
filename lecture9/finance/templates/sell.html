@@ -5,19 +5,20 @@ Sell
 {% endblock %}
 
 {% block main %}
-<div class="container">
-    <h1 class="my-4">Sell Stocks</h1>
+<form action="/sell" method="post">
+    <div class="mb-3">
+        <select class="form-select mx-auto w-auto" name="symbol">
+            <option disabled selected>Symbol</option>
+            {% for symbols in user_symbols %}
+            <option>{{ symbols.symbol | safe }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="mb-3">
+        <input autocomplete="off" class="form-control mx-auto w-auto" min="0" name="shares" placeholder="Shares"
+               type="number">
+    </div>
+    <button class="btn btn-primary" type="submit">Sell</button>
+</form>
 
-    <form action="/sell" method="post">
-        <div class="mb-3">
-            <label for="symbol" class="form-label">Symbol</label>
-            <input id="symbol" class="form-control" name="symbol" placeholder="Symbol" type="text" required>
-        </div>
-        <div class="mb-3">
-            <label for="shares" class="form-label">Shares</label>
-            <input id="shares" class="form-control" name="shares" placeholder="Shares" type="number" min="1" required>
-        </div>
-        <button class="btn btn-primary" type="submit">Sell</button>
-    </form>
-</div>
 {% endblock %}

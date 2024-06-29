@@ -1,0 +1,76 @@
+{% extends "layout.html" %}
+
+{% block title %}
+Quote
+{% endblock %}
+
+{% block main %}
+<h1>Get a Stock Quote</h1>
+<form action="/quote" method="post">
+    <div class="mb-3">
+        <input class="form-control" name="symbol" placeholder="Symbol" type="text" required>
+    </div>
+    <button class="btn btn-primary" type="submit">Get Quote</button>
+</form>
+{% if quote %}
+<h2>{{ quote.symbol }}</h2>
+<p>Price: {{ quote.price | usd }}</p>
+{% endif %}
+
+<!--{% if stock %}-->
+<!--<div class="card mb-3">-->
+<!--    <div class="card-header">-->
+<!--        <h5 class="card-title">{{ stock.symbol }}</h5>-->
+<!--        <p class="card-text">{{ stock.name }}</p>-->
+<!--    </div>-->
+<!--    <div class="card-body">-->
+<!--        <p class="card-text">Price: {{ stock.price | usd }}</p>-->
+<!--    </div>-->
+<!--</div>-->
+
+<!--<canvas id="priceChart" width="400" height="200"></canvas>-->
+
+<!--<script>-->
+<!--    // Get historical data from Flask variable-->
+<!--    let dates = {{ stock.dates | tojson }};-->
+<!--    let prices = {{ stock.prices | tojson }};-->
+
+<!--    // Format dates as JavaScript Date objects-->
+<!--    dates = dates.map(dateStr => new Date(dateStr));-->
+
+<!--    // Chart.js configuration-->
+<!--    let ctx = document.getElementById('priceChart').getContext('2d');-->
+<!--    let priceChart = new Chart(ctx, {-->
+<!--        type: 'line',-->
+<!--        data: {-->
+<!--            labels: dates,-->
+<!--            datasets: [{-->
+<!--                label: 'Price Over Time',-->
+<!--                data: prices,-->
+<!--                fill: false,-->
+<!--                borderColor: 'rgb(75, 192, 192)',-->
+<!--                tension: 0.1-->
+<!--            }]-->
+<!--        },-->
+<!--        options: {-->
+<!--            scales: {-->
+<!--                x: {-->
+<!--                    type: 'time',-->
+<!--                    time: {-->
+<!--                        unit: 'day'-->
+<!--                    }-->
+<!--                },-->
+<!--                y: {-->
+<!--                    title: {-->
+<!--                        display: true,-->
+<!--                        text: 'Price'-->
+<!--                    }-->
+<!--                }-->
+<!--            }-->
+<!--        }-->
+<!--    });-->
+<!--</script>-->
+<!--{% endif %}-->
+
+
+{% endblock %}

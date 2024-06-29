@@ -1,0 +1,81 @@
+/* General Styles */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #e9ecef;
+    margin: 0;
+    padding: 0;
+}
+
+/* Navbar Styles */
+.navbar {
+    margin-bottom: 20px;
+}
+
+/* Carousel Styles */
+.carousel-item img {
+    height: 400px;
+    object-fit: cover;
+}
+
+/* Card Styles */
+.card {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: scale(1.05);
+}
+
+/* Button Styles */
+.btn-primary {
+    background-color: #15A7E6;
+    border-color: #0E6B93;
+}
+
+.btn-primary:hover {
+    background-color: #55C1EF;
+    border-color: #0E6B93;
+}
+
+/* Form Styles */
+form {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Input Styles */
+input[type="text"],
+input[type="email"],
+textarea {
+    width: 100%;
+    padding: 10px;
+    margin: 5px 0 20px 0;
+    display: inline-block;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+/* Footer Styles */
+footer {
+    background-color: #0C5F83;
+    color: white;
+    padding: 20px 0;
+}
+
+/* Container Styles */
+.container {
+    max-width: 960px;
+    margin: auto;
+    padding: 20px;
+}
+
+/* Gallery Styles */
+.gallery img {
+    width: 100%;
+    height: auto;
+    margin-bottom: 20px;
+}

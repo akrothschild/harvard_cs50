@@ -2,7 +2,7 @@
 Code to train cs50 course. Solutions to problem sets.
 Currently, I am using online VS Code from Harvard and IDEA IDEs. If you code offline, download cs50 library.
 All "green" but I would recommend to think yourself. 
-Course itself and Problem sets are great to train your skills.
+Course itself and Problem sets are great to train. your skills.
 
 # Usage:
 Done to use on Harvard VM. To use locally include cs50 library 
